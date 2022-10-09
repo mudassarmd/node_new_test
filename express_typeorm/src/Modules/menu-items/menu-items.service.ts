@@ -86,6 +86,29 @@ export class MenuItemsService {
   */
 
   async getMenuItems() {
-    throw new Error('TODO in task 3');
+    let promise = new Promise(async (resolve, reject) => {
+        let menu = await this.menuItemRepository.find();
+
+        const response = menu.map((item) => {
+            let children = menu.filter((nested) => {
+                return nested.parentId === item.id
+            });
+            let obj = {...item, "children":children};
+            return obj;
+        });
+
+        Promise.all(response).then((res) => {
+        resolve(
+            res.map((result) => {
+            return result;
+            }))
+        }).catch((err) => {
+            console.log('fails',err.toString());
+        reject(err);
+        })
+      });
+  
+      let results = await promise;
+      return results;
   }
 }
