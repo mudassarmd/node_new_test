@@ -197,6 +197,38 @@ export class EventsService {
     ```
      */
   async getFutureEventWithWorkshops() {
-    throw new Error('TODO task 2');
+    let promise = new Promise((resolve, reject) => {
+
+      this.eventRepository.find().then((results : Event[]) => {
+        let responseData =
+        results.map(async (value : Event) => {
+          const workshops = await this.workshopRepository.
+          createQueryBuilder("workshop").
+          where("workshop.eventId = :eventId AND DATE(workshop.start) > :date", 
+          { eventId: value.id, date: new Date() }).
+          getMany();
+          if ( workshops.length > 1 ) {
+            let obj = {...value,"workshops" : workshops};
+            return obj;
+          }
+        });
+
+        Promise.all(responseData).then((res) => {
+          resolve(
+            res.filter(x => x).map((result) => {
+              return result;
+            }))
+        }).catch((err) => {
+          console.log('fails',err.toString());
+          reject(err);
+        })
+      }).catch((err) => {
+        console.log('fails',err.toString());
+        reject(err);
+      })
+    });
+
+    let results = await promise;
+    return results;
   }
 }
