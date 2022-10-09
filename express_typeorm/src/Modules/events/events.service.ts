@@ -1,13 +1,19 @@
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Event } from './entities/event.entity';
+import { Workshop } from './entities/workshop.entity';
 import App from "../../app";
+import { resolveProjectReferencePath } from 'typescript';
 
 
 export class EventsService {
   private eventRepository: Repository<Event>;
+  private workshopRepository: Repository<Workshop>;
+  private dataSource: DataSource;
 
   constructor(app: App) {
-    this.eventRepository = app.getDataSource().getRepository(Event);
+    this.dataSource = app.getDataSource();
+    this.eventRepository = this.dataSource.getRepository(Event);
+    this.workshopRepository = this.dataSource.getRepository(Workshop);
   }
 
   async getWarmupEvents() {
@@ -92,7 +98,36 @@ export class EventsService {
      */
 
   async getEventsWithWorkshops() {
-    throw new Error('TODO task 1');
+    let promise = new Promise((resolve, reject) => {
+      this.eventRepository.find().then((results : Event[]) => {
+        let responseData =
+        results.map(async (value : Event) => {
+          const workshops = await this.workshopRepository.find({
+            where: {
+              eventId: value.id
+            }
+          })
+          let obj = {...value,"workshops" : workshops};
+          return obj;
+        });
+
+        Promise.all(responseData).then((res) => {
+          resolve(
+            res.map((result) => {
+              return result;
+            }))
+        }).catch((err) => {
+          console.log('fails',err.toString());
+          reject(err);
+        })
+      }).catch((err) => {
+        console.log('fails',err.toString());
+        reject(err);
+      })
+    });
+
+    let results = await promise;
+    return results;
   }
 
   /* TODO: complete getFutureEventWithWorkshops so that it returns events with workshops, that have not yet started
